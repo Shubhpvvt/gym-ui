@@ -1,13 +1,78 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 import StatCard from "../components/StatCard";
 
 export default function SuperAdminDashboard() {
-  const navigate = useNavigate(); // 👈 navigation hook
+  const navigate = useNavigate();
 
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    totalTrainers: 0,
+    totalGymOwners: 0,
+  });
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    // 🔑 STEP 1: token lena
+    const token = localStorage.getItem("token");
+
+    // ❌ agar token nahi hai → login
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+
+    // 🔗 STEP 2: backend call (PORT 5000 FIXED)
+    axios
+      .get("http://localhost:5000/api/dashboard", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      .then((res) => {
+        // ✅ backend se stats aaye
+        if (res.data && res.data.stats) {
+          setStats({
+            totalUsers: res.data.stats.totalUsers || 0,
+            totalTrainers: res.data.stats.totalTrainers || 0,
+            totalGymOwners: res.data.stats.totalGymOwners || 0,
+          });
+        }
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.log("DASHBOARD ERROR 👉", err);
+        setError("Failed to load dashboard");
+        setLoading(false);
+      });
+  }, [navigate]);
+
+  // ⏳ loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        Loading dashboard...
+      </div>
+    );
+  }
+
+  // ❌ error state
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-red-600">
+        {error}
+      </div>
+    );
+  }
+
+  // ✅ SUCCESS UI (DESIGN SAME)
   return (
     <div className="min-h-screen bg-slate-100 p-4 sm:p-6">
 
-      {/* PAGE HEADER */}
+      {/* HEADER */}
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-800">
@@ -18,7 +83,6 @@ export default function SuperAdminDashboard() {
           </p>
         </div>
 
-        {/* Quick Actions */}
         <div className="mt-4 sm:mt-0 flex gap-2">
           <button
             onClick={() => navigate("/gyms")}
@@ -35,55 +99,51 @@ export default function SuperAdminDashboard() {
         </div>
       </div>
 
-      {/* STATS CARDS */}
+      {/* STATS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard title="Total Gyms" value="24" />
-        <StatCard title="Active Users" value="1,248" />
-        <StatCard title="Total Trainers" value="86" />
+        <StatCard title="Total Users" value={stats.totalUsers} />
+        <StatCard title="Total Trainers" value={stats.totalTrainers} />
+        <StatCard title="Gym Owners" value={stats.totalGymOwners} />
         <StatCard title="Monthly Revenue" value="₹4.6L" />
       </div>
 
-      {/* RECENT ACTIVITY */}
+      {/* RECENT ACTIVITY (STATIC) */}
       <div className="bg-white rounded-lg shadow p-4 sm:p-6">
         <h2 className="text-lg font-semibold text-slate-800 mb-4">
           Recent Activity
         </h2>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-slate-500 border-b">
-                <th className="pb-2">Type</th>
-                <th className="pb-2">Name</th>
-                <th className="pb-2">Date</th>
-                <th className="pb-2">Status</th>
-              </tr>
-            </thead>
-
-            <tbody className="text-slate-700">
-              <tr className="border-b">
-                <td className="py-2">Gym</td>
-                <td>Iron Core Fitness</td>
-                <td>12 Sep 2026</td>
-                <td className="text-green-600 font-medium">Active</td>
-              </tr>
-              <tr className="border-b">
-                <td className="py-2">Trainer</td>
-                <td>Rahul Sharma</td>
-                <td>10 Sep 2026</td>
-                <td className="text-green-600 font-medium">Approved</td>
-              </tr>
-              <tr>
-                <td className="py-2">User</td>
-                <td>Ankit Verma</td>
-                <td>09 Sep 2026</td>
-                <td className="text-yellow-600 font-medium">Pending</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-left text-slate-500 border-b">
+              <th className="pb-2">Type</th>
+              <th className="pb-2">Name</th>
+              <th className="pb-2">Date</th>
+              <th className="pb-2">Status</th>
+            </tr>
+          </thead>
+          <tbody className="text-slate-700">
+            <tr className="border-b">
+              <td className="py-2">Gym</td>
+              <td>Iron Core Fitness</td>
+              <td>12 Sep 2026</td>
+              <td className="text-green-600 font-medium">Active</td>
+            </tr>
+            <tr className="border-b">
+              <td className="py-2">Trainer</td>
+              <td>Rahul Sharma</td>
+              <td>10 Sep 2026</td>
+              <td className="text-green-600 font-medium">Approved</td>
+            </tr>
+            <tr>
+              <td className="py-2">User</td>
+              <td>Ankit Verma</td>
+              <td>09 Sep 2026</td>
+              <td className="text-yellow-600 font-medium">Pending</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-
     </div>
   );
 }

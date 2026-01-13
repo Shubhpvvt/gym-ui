@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -10,19 +11,47 @@ export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     setError("");
 
+    // frontend validation
     if (!email || !password) {
       setError("Email and password are required");
       return;
     }
 
-    setLoading(true);
-    setTimeout(() => {
+    try {
+      setLoading(true);
+
+      const res = await axios.post(
+        "http://localhost:5000/api/auth/login",
+        { email, password }
+      );
+
+      // save token & user
+      localStorage.setItem("token", res.data.token);
+      localStorage.setItem("user", JSON.stringify(res.data.user));
+
+      // role based redirect
+      const role = res.data.user.role;
+
+      if (role === "superAdmin") {
+        navigate("/dashboard/");
+      } else if (role === "gymOwner") {
+        navigate("/dashboard/gym-owner");
+      } else if (role === "trainer") {
+        navigate("/dashboard/trainer");
+      } else {
+        navigate("/dashboard/user");
+      }
+
+    } catch (err) {
+      setError(
+        err.response?.data?.message || "Something went wrong"
+      );
+    } finally {
       setLoading(false);
-      navigate("/dashboard");
-    }, 800);
+    }
   };
 
   return (
@@ -63,7 +92,6 @@ export default function Login() {
             flex flex-col justify-center
           "
         >
-          {/* TITLE */}
           <h2 className="text-xl sm:text-2xl font-bold text-slate-800">
             Sign in to your account
           </h2>
@@ -72,17 +100,14 @@ export default function Login() {
             Use your admin credentials to continue
           </p>
 
-          {/* SOFT DIVIDER */}
           <div className="h-px w-full bg-slate-200 my-6"></div>
 
-          {/* ERROR */}
           {error && (
             <div className="mb-4 rounded-md bg-red-50 text-red-600 text-sm px-3 py-2">
               {error}
             </div>
           )}
 
-          {/* EMAIL */}
           <div className="mb-4">
             <label className="block text-sm font-medium text-slate-600 mb-1">
               Email address
@@ -103,7 +128,6 @@ export default function Login() {
             />
           </div>
 
-          {/* PASSWORD */}
           <div className="mb-5">
             <label className="block text-sm font-medium text-slate-600 mb-1">
               Password
@@ -139,7 +163,6 @@ export default function Login() {
             </div>
           </div>
 
-          {/* ACTIONS */}
           <div className="flex items-center justify-between mb-6">
             <label className="flex items-center text-sm text-slate-600">
               <input
@@ -158,7 +181,6 @@ export default function Login() {
             </button>
           </div>
 
-          {/* LOGIN BUTTON */}
           <button
             onClick={handleLogin}
             disabled={loading}

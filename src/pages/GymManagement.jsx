@@ -1,12 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import axios from "axios";
 import Modal from "../components/Modal";
 
 export default function GymManagement() {
-  const [gyms, setGyms] = useState([
-    { id: 1, name: "Iron Core Fitness", status: "Active" },
-    { id: 2, name: "Fit Zone Gym", status: "Inactive" },
-  ]);
-
+  const [gyms, setGyms] = useState([]);
   const [name, setName] = useState("");
   const [status, setStatus] = useState("Active");
 
@@ -15,25 +12,97 @@ export default function GymManagement() {
 
   const [editGym, setEditGym] = useState(null);
 
-  // ADD
+  const token = localStorage.getItem("token");
+
+  /* ================= LOAD GYMS ================= */
+  useEffect(() => {
+    axios
+      .get("http://localhost:5000/api/gyms", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      .then((res) => {
+        setGyms(res.data);
+      })
+      .catch((err) => {
+        console.log("LOAD ERROR", err);
+      });
+  }, []);
+
+  /* ================= ADD GYM ================= */
   const addGym = () => {
-    if (!name.trim()) return;
+    if (!name.trim()) {
+      alert("Gym name required");
+      return;
+    }
 
-    setGyms([
-      ...gyms,
-      { id: Date.now(), name, status },
-    ]);
-
-    setName("");
-    setStatus("Active");
+    axios
+      .post(
+        "http://localhost:5000/api/gyms",
+        { name, status },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
+      .then((res) => {
+        setGyms([res.data.gym, ...gyms]);
+        setName("");
+        setStatus("Active");
+      })
+      .catch((err) => {
+        console.log("ADD ERROR", err.response?.data || err.message);
+        alert("Add failed");
+      });
   };
 
-  // DELETE
+  /* ================= DELETE GYM ================= */
   const deleteGym = (id) => {
-    setGyms(gyms.filter((g) => g.id !== id));
+    axios
+      .delete(`http://localhost:5000/api/gyms/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      .then(() => {
+        setGyms(gyms.filter((g) => g._id !== id));
+      })
+      .catch((err) => {
+        console.log("DELETE ERROR", err);
+      });
   };
 
-  // SEARCH + FILTER
+  /* ================= UPDATE GYM ================= */
+  const updateGym = () => {
+    axios
+      .put(
+        `http://localhost:5000/api/gyms/${editGym._id}`,
+        {
+          name: editGym.name,
+          status: editGym.status,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
+      .then((res) => {
+        setGyms(
+          gyms.map((g) =>
+            g._id === editGym._id ? res.data.gym : g
+          )
+        );
+        setEditGym(null);
+      })
+      .catch((err) => {
+        console.log("UPDATE ERROR", err);
+      });
+  };
+
+  /* ================= SEARCH + FILTER ================= */
   const filteredGyms = gyms.filter((g) => {
     const matchName = g.name
       .toLowerCase()
@@ -47,7 +116,8 @@ export default function GymManagement() {
 
   return (
     <div className="space-y-8">
-      {/* PAGE HEADER */}
+
+      {/* HEADER */}
       <div>
         <h1 className="text-2xl font-bold text-slate-800">
           Gym Management
@@ -68,7 +138,7 @@ export default function GymManagement() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Gym name"
-            className="border rounded-md px-3 py-2 focus:ring-2 focus:ring-slate-900"
+            className="border rounded-md px-3 py-2"
           />
 
           <select
@@ -82,15 +152,14 @@ export default function GymManagement() {
 
           <button
             onClick={addGym}
-            className="bg-slate-900 hover:bg-slate-800 text-white
-                       rounded-md px-5 py-2 font-medium"
+            className="bg-slate-900 text-white rounded-md px-5 py-2"
           >
             Add Gym
           </button>
         </div>
       </div>
 
-      {/* SEARCH & FILTER */}
+      {/* SEARCH + FILTER */}
       <div className="flex flex-col sm:flex-row gap-3">
         <input
           placeholder="Search gym by name"
@@ -110,74 +179,55 @@ export default function GymManagement() {
         </select>
       </div>
 
-      {/* GYM LIST */}
+      {/* LIST */}
       <div className="bg-white rounded-xl shadow-sm p-6">
         <h2 className="text-lg font-semibold mb-4">
           Registered Gyms
         </h2>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-slate-500 border-b">
-                <th className="pb-2">Gym Name</th>
-                <th className="pb-2">Status</th>
-                <th className="pb-2 text-right">Actions</th>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-left text-slate-500 border-b">
+              <th className="pb-2">Gym Name</th>
+              <th className="pb-2">Status</th>
+              <th className="pb-2 text-right">Actions</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {filteredGyms.map((gym) => (
+              <tr key={gym._id} className="border-b">
+                <td className="py-3">{gym.name}</td>
+                <td>{gym.status}</td>
+                <td className="text-right">
+                  <button
+                    onClick={() => setEditGym(gym)}
+                    className="text-blue-600 mr-4"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => deleteGym(gym._id)}
+                    className="text-red-600"
+                  >
+                    Delete
+                  </button>
+                </td>
               </tr>
-            </thead>
+            ))}
+          </tbody>
+        </table>
 
-            <tbody>
-              {filteredGyms.map((gym) => (
-                <tr key={gym.id} className="border-b">
-                  <td className="py-3">{gym.name}</td>
-
-                  <td>
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-medium
-                        ${
-                          gym.status === "Active"
-                            ? "bg-green-100 text-green-700"
-                            : "bg-red-100 text-red-700"
-                        }`}
-                    >
-                      {gym.status}
-                    </span>
-                  </td>
-
-                  <td className="text-right">
-                    <button
-                      onClick={() => setEditGym(gym)}
-                      className="text-blue-600 hover:underline mr-4"
-                    >
-                      Edit
-                    </button>
-
-                    <button
-                      onClick={() => deleteGym(gym.id)}
-                      className="text-red-600 hover:underline"
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          {filteredGyms.length === 0 && (
-            <p className="text-center text-slate-400 mt-4">
-              No gyms found
-            </p>
-          )}
-        </div>
+        {filteredGyms.length === 0 && (
+          <p className="text-center text-slate-400 mt-4">
+            No gyms found
+          </p>
+        )}
       </div>
 
       {/* EDIT MODAL */}
       {editGym && (
-        <Modal
-          title="Edit Gym"
-          onClose={() => setEditGym(null)}
-        >
+        <Modal title="Edit Gym" onClose={() => setEditGym(null)}>
           <div className="space-y-4">
             <input
               value={editGym.name}
@@ -199,16 +249,8 @@ export default function GymManagement() {
             </select>
 
             <button
-              onClick={() => {
-                setGyms(
-                  gyms.map((g) =>
-                    g.id === editGym.id ? editGym : g
-                  )
-                );
-                setEditGym(null);
-              }}
-              className="bg-slate-900 hover:bg-slate-800
-                         text-white px-5 py-2 rounded-md"
+              onClick={updateGym}
+              className="bg-slate-900 text-white px-5 py-2 rounded-md"
             >
               Save Changes
             </button>

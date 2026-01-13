@@ -1,23 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import axios from "axios";
 import Modal from "../components/Modal";
 
 export default function TrainerManagement() {
-  const [trainers, setTrainers] = useState([
-    {
-      id: 1,
-      name: "Rahul Sharma",
-      email: "rahul@gym.com",
-      specialization: "Weight Training",
-      status: "Active",
-    },
-    {
-      id: 2,
-      name: "Anita Verma",
-      email: "anita@gym.com",
-      specialization: "Yoga",
-      status: "Inactive",
-    },
-  ]);
+  const [trainers, setTrainers] = useState([]);
+  const [editTrainer, setEditTrainer] = useState(null);
 
   const [form, setForm] = useState({
     name: "",
@@ -28,31 +15,88 @@ export default function TrainerManagement() {
 
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("All");
-  const [editTrainer, setEditTrainer] = useState(null);
 
-  // ADD TRAINER
+  const token = localStorage.getItem("token");
+
+  /* ================= LOAD TRAINERS ================= */
+  useEffect(() => {
+    axios
+      .get("http://localhost:5000/api/trainers", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      .then((res) => setTrainers(res.data))
+      .catch((err) => console.log("LOAD ERROR", err));
+  }, []);
+
+  /* ================= ADD TRAINER ================= */
   const addTrainer = () => {
     if (!form.name || !form.email) return;
 
-    setTrainers([
-      ...trainers,
-      { id: Date.now(), ...form },
-    ]);
-
-    setForm({
-      name: "",
-      email: "",
-      specialization: "",
-      status: "Active",
-    });
+    axios
+      .post(
+        "http://localhost:5000/api/trainers",
+        form,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
+      .then((res) => {
+        setTrainers([res.data.trainer, ...trainers]);
+        setForm({
+          name: "",
+          email: "",
+          specialization: "",
+          status: "Active",
+        });
+      })
+      .catch((err) => {
+        console.log("ADD ERROR", err.response?.data || err);
+        alert("Add failed");
+      });
   };
 
-  // DELETE TRAINER
+  /* ================= DELETE TRAINER ================= */
   const deleteTrainer = (id) => {
-    setTrainers(trainers.filter((t) => t.id !== id));
+    axios
+      .delete(`http://localhost:5000/api/trainers/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      .then(() => {
+        setTrainers(trainers.filter((t) => t._id !== id));
+      })
+      .catch((err) => console.log("DELETE ERROR", err));
   };
 
-  // SEARCH + FILTER
+  /* ================= UPDATE TRAINER ================= */
+  const updateTrainer = () => {
+    axios
+      .put(
+        `http://localhost:5000/api/trainers/${editTrainer._id}`,
+        editTrainer,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
+      .then((res) => {
+        setTrainers(
+          trainers.map((t) =>
+            t._id === editTrainer._id ? res.data.trainer : t
+          )
+        );
+        setEditTrainer(null);
+      })
+      .catch((err) => console.log("UPDATE ERROR", err));
+  };
+
+  /* ================= SEARCH + FILTER ================= */
   const filteredTrainers = trainers.filter((t) => {
     const matchText =
       t.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -160,61 +204,59 @@ export default function TrainerManagement() {
           Registered Trainers
         </h2>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b text-left text-slate-500">
-                <th>Name</th>
-                <th>Email</th>
-                <th>Specialization</th>
-                <th>Status</th>
-                <th className="text-right">Actions</th>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b text-left text-slate-500">
+              <th>Name</th>
+              <th>Email</th>
+              <th>Specialization</th>
+              <th>Status</th>
+              <th className="text-right">Actions</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {filteredTrainers.map((trainer) => (
+              <tr key={trainer._id} className="border-b">
+                <td className="py-3">{trainer.name}</td>
+                <td>{trainer.email}</td>
+                <td>{trainer.specialization}</td>
+                <td>
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-medium
+                      ${
+                        trainer.status === "Active"
+                          ? "bg-green-100 text-green-700"
+                          : "bg-red-100 text-red-700"
+                      }`}
+                  >
+                    {trainer.status}
+                  </span>
+                </td>
+                <td className="text-right">
+                  <button
+                    onClick={() => setEditTrainer(trainer)}
+                    className="text-blue-600 hover:underline mr-4"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => deleteTrainer(trainer._id)}
+                    className="text-red-600 hover:underline"
+                  >
+                    Delete
+                  </button>
+                </td>
               </tr>
-            </thead>
+            ))}
+          </tbody>
+        </table>
 
-            <tbody>
-              {filteredTrainers.map((trainer) => (
-                <tr key={trainer.id} className="border-b">
-                  <td className="py-3">{trainer.name}</td>
-                  <td>{trainer.email}</td>
-                  <td>{trainer.specialization}</td>
-                  <td>
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs font-medium
-                        ${
-                          trainer.status === "Active"
-                            ? "bg-green-100 text-green-700"
-                            : "bg-red-100 text-red-700"
-                        }`}
-                    >
-                      {trainer.status}
-                    </span>
-                  </td>
-                  <td className="text-right">
-                    <button
-                      onClick={() => setEditTrainer(trainer)}
-                      className="text-blue-600 hover:underline mr-4"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => deleteTrainer(trainer.id)}
-                      className="text-red-600 hover:underline"
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          {filteredTrainers.length === 0 && (
-            <p className="text-center text-slate-400 mt-4">
-              No trainers found
-            </p>
-          )}
-        </div>
+        {filteredTrainers.length === 0 && (
+          <p className="text-center text-slate-400 mt-4">
+            No trainers found
+          </p>
+        )}
       </div>
 
       {/* EDIT MODAL */}
@@ -272,14 +314,7 @@ export default function TrainerManagement() {
             </select>
 
             <button
-              onClick={() => {
-                setTrainers(
-                  trainers.map((t) =>
-                    t.id === editTrainer.id ? editTrainer : t
-                  )
-                );
-                setEditTrainer(null);
-              }}
+              onClick={updateTrainer}
               className="bg-slate-900 hover:bg-slate-800
                          text-white px-5 py-2 rounded-md"
             >
