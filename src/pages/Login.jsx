@@ -24,7 +24,7 @@ export default function Login() {
       setLoading(true);
 
       const res = await axios.post(
-        "http://localhost:5000/api/auth/login",
+        `${import.meta.env.VITE_API_URL}/api/auth/login`,
         { email, password }
       );
 
@@ -36,7 +36,7 @@ export default function Login() {
       const role = res.data.user.role;
 
       if (role === "superAdmin") {
-        navigate("/dashboard/");
+        navigate("/dashboard");
       } else if (role === "gymOwner") {
         navigate("/dashboard/gym-owner");
       } else if (role === "trainer") {
@@ -46,9 +46,7 @@ export default function Login() {
       }
 
     } catch (err) {
-      setError(
-        err.response?.data?.message || "Something went wrong"
-      );
+      setError(err.response?.data?.message || "Something went wrong");
     } finally {
       setLoading(false);
     }
