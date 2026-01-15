@@ -12,10 +12,12 @@ app.use(express.json());
 
 // routes
 app.use('/api/auth', require('./routes/auth.routes'));
-app.use('/api/dashboard', require('./routes/dashboard.routes'));
 app.use("/api/gyms", require("./routes/gym.routes"));
 app.use("/api/gym-owners", require("./routes/gymOwner.routes"));
 app.use("/api/trainers", require("./routes/trainer.routes"));
+const dashboardRoutes = require("./routes/dashboard.routes");
+
+app.use("/api/dashboard", dashboardRoutes);
 
 
 

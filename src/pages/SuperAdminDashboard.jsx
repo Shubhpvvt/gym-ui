@@ -16,24 +16,22 @@ export default function SuperAdminDashboard() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    // 🔑 STEP 1: token lena
     const token = localStorage.getItem("token");
 
-    // ❌ agar token nahi hai → login
+    // ❌ no token → login
     if (!token) {
       navigate("/login");
       return;
     }
 
-    // 🔗 STEP 2: backend call (PORT 5000 FIXED)
+    // ✅ CORRECT API CALL (ENV BASED)
     axios
-      .get("http://localhost:5000/api/dashboard", {
+      .get(`${import.meta.env.VITE_API_URL}/api/dashboard`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       })
       .then((res) => {
-        // ✅ backend se stats aaye
         if (res.data && res.data.stats) {
           setStats({
             totalUsers: res.data.stats.totalUsers || 0,
@@ -50,7 +48,6 @@ export default function SuperAdminDashboard() {
       });
   }, [navigate]);
 
-  // ⏳ loading state
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -59,7 +56,6 @@ export default function SuperAdminDashboard() {
     );
   }
 
-  // ❌ error state
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center text-red-600">
@@ -68,7 +64,6 @@ export default function SuperAdminDashboard() {
     );
   }
 
-  // ✅ SUCCESS UI (DESIGN SAME)
   return (
     <div className="min-h-screen bg-slate-100 p-4 sm:p-6">
 
@@ -107,7 +102,7 @@ export default function SuperAdminDashboard() {
         <StatCard title="Monthly Revenue" value="₹4.6L" />
       </div>
 
-      {/* RECENT ACTIVITY (STATIC) */}
+      {/* RECENT ACTIVITY */}
       <div className="bg-white rounded-lg shadow p-4 sm:p-6">
         <h2 className="text-lg font-semibold text-slate-800 mb-4">
           Recent Activity
